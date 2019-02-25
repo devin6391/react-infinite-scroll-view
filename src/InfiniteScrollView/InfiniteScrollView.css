@@ -1,0 +1,25 @@
+.infiniteScrollContainer {
+  height: 100%;
+  width: 100%;
+  overflow-y: 100%;
+  overflow-x: hidden;
+  position: relative;
+  overscroll-behavior: none;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+
+.listContainer {
+  height: auto;
+  width: auto;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+
+.loadingComponentTop,
+.loadingComponentBottom {
+  height: 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}

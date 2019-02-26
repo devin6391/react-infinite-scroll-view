@@ -4,21 +4,35 @@ export enum ScrollDirection {
 }
 
 export let TopIntersectionObs: IntersectionObserver;
+export let BottomIntersectionObs: IntersectionObserver;
+
+let bottomContained = new Set<HTMLElement>();
 
 let scrollDirection: ScrollDirection = ScrollDirection.UP;
 let topMostElement: HTMLElement;
+let bottomMostElement: HTMLElement;
 
 export function initIntesectionObserver(
   containerRef: React.RefObject<HTMLElement>
 ) {
-  const intersectionObserverOptions = {
+  const topIntersectionObserverOptions = {
     root: containerRef.current,
     threshold: [0, 0.9],
     rootMargin: "100px 0px -100% 0px"
   };
   TopIntersectionObs = new IntersectionObserver(
-    intersectionObsCallback,
-    intersectionObserverOptions
+    topIntersectionObsCallback,
+    topIntersectionObserverOptions
+  );
+
+  const bottomIntersectionObserverOptions = {
+    root: containerRef.current,
+    threshold: [0, 0.9],
+    rootMargin: "-100% 0px 100px 0px"
+  };
+  BottomIntersectionObs = new IntersectionObserver(
+    bottomIntersectionObsCallback,
+    bottomIntersectionObserverOptions
   );
 }
 
@@ -34,16 +48,12 @@ export function getTopmostElement(): HTMLElement {
   return topMostElement;
 }
 
-function intersectionObsCallback(entries: IntersectionObserverEntry[]) {
+export function getBottomMostElement(): HTMLElement {
+  return bottomMostElement;
+}
+
+function topIntersectionObsCallback(entries: IntersectionObserverEntry[]) {
   entries.forEach(entry => {
-    console.log("=====Intersection=====");
-    console.log("Target: ", entry.target);
-    console.log("Is intersection?: ", entry.isIntersecting);
-    console.log("Intersection ratio: ", entry.intersectionRatio);
-    console.log(
-      "scroll direction: ",
-      scrollDirection === ScrollDirection.DOWN ? "Down" : "Up"
-    );
     if (
       entry.isIntersecting &&
       scrollDirection === ScrollDirection.UP &&
@@ -58,4 +68,22 @@ function intersectionObsCallback(entries: IntersectionObserverEntry[]) {
       topMostElement = entry.target as HTMLElement;
     }
   });
+}
+
+function bottomIntersectionObsCallback(entries: IntersectionObserverEntry[]) {
+  entries.forEach(entry => {
+    if (
+      entry.isIntersecting &&
+      scrollDirection === ScrollDirection.UP &&
+      Math.round(entry.intersectionRatio) === 1
+    ) {
+      bottomMostElement = entry.target as HTMLElement;
+    } else if (
+      entry.isIntersecting &&
+      scrollDirection === ScrollDirection.DOWN &&
+      Math.round(entry.intersectionRatio) === 0
+    ) {
+      bottomMostElement = entry.target as HTMLElement;
+    }
+  })
 }

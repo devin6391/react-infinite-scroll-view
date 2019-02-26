@@ -7,7 +7,9 @@ import {
   getScrollDirection,
   initIntesectionObserver,
   TopIntersectionObs,
-  getTopmostElement
+  getTopmostElement,
+  BottomIntersectionObs,
+  getBottomMostElement
 } from "./utils";
 import "./InfiniteScrollView.css";
 
@@ -52,7 +54,8 @@ export default class InfiniteScrollView extends React.Component<
 
       setInterval(() => {
         console.log("Topmost element initially is: ", getTopmostElement());
-      }, 1000);
+        console.log("Bottommost element initially is: ", getBottomMostElement());
+      }, 2000);
     }
   }
 
@@ -137,6 +140,7 @@ export default class InfiniteScrollView extends React.Component<
     const children = this.listRef.current.children;
     for (let i = 0; i < children.length; i++) {
       TopIntersectionObs.observe(children[i]);
+      BottomIntersectionObs.observe(children[i]);
     }
   };
 

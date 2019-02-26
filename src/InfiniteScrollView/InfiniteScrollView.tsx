@@ -9,7 +9,8 @@ import {
   TopIntersectionObs,
   getTopmostElement,
   BottomIntersectionObs,
-  getBottomMostElement
+  getBottomMostElement,
+  destroyIntersectionObserver
 } from "./utils";
 import "./InfiniteScrollView.css";
 
@@ -38,7 +39,7 @@ export default class InfiniteScrollView extends React.Component<
 
   componentDidMount() {
     const { pivotKeySelector } = this.props;
-    initIntesectionObserver(this.scrollRef, this.listRef);
+    initIntesectionObserver(this.scrollRef);
     this.observeIntersectionOnChildren();
 
     if (pivotKeySelector) {
@@ -57,6 +58,10 @@ export default class InfiniteScrollView extends React.Component<
         // console.log("Bottommost element initially is: ", getBottomMostElement());
       }, 2000);
     }
+  }
+
+  componentWillUnmount() {
+    destroyIntersectionObserver();
   }
 
   shouldComponentUpdate(newProps: InfiniteScrollViewProps) {

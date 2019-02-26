@@ -11,7 +11,9 @@ export enum ContainerPosition {
 export let TopIntersectionObs: IntersectionObserver;
 export let BottomIntersectionObs: IntersectionObserver;
 
-let elemsContainerRef: React.RefObject<HTMLElement>;
+const maxAllowedElemsBeyondViewPort = 10;
+const minRequiredElementBeyondViewPort = 5;
+
 let scrollDirection: ScrollDirection = ScrollDirection.UP;
 let topMostElement: HTMLElement;
 let bottomMostElement: HTMLElement;
@@ -19,14 +21,12 @@ let topContainerIntersectedElems = new Set<HTMLElement>();
 let bottomContainerIntersectedElems = new Set<HTMLElement>();
 
 export function initIntesectionObserver(
-  containerRef: React.RefObject<HTMLElement>,
-  listRef: React.RefObject<HTMLElement>
+  containerRef: React.RefObject<HTMLElement>
 ) {
-  elemsContainerRef = listRef;
   const topIntersectionObserverOptions = {
     root: containerRef.current,
-    threshold: [0, 0.5, 0.9],
-    rootMargin: "500px 0px -99.9% 0px"
+    threshold: [0, 1],
+    rootMargin: "5000px 0px -99% 0px"
   };
   TopIntersectionObs = new IntersectionObserver(
     topIntersectionObsCallback,
@@ -36,15 +36,26 @@ export function initIntesectionObserver(
   const bottomIntersectionObserverOptions = {
     root: containerRef.current,
     threshold: [0, 1],
-    rootMargin: "-99.9% 0px 500px 0px"
+    rootMargin: "-99% 0px 5000px 0px"
   };
   BottomIntersectionObs = new IntersectionObserver(
     bottomIntersectionObsCallback,
     bottomIntersectionObserverOptions
   );
+}
 
-  TopIntersectionObs.observe(elemsContainerRef.current as HTMLElement);
-  BottomIntersectionObs.observe(elemsContainerRef.current as HTMLElement);
+export function destroyIntersectionObserver() {
+  // Stop all observations
+  TopIntersectionObs.disconnect();
+  BottomIntersectionObs.disconnect();
+
+  // Nullify all variables
+  topMostElement = (null as unknown) as HTMLElement;
+  bottomMostElement = (null as unknown) as HTMLElement;
+  topContainerIntersectedElems = (null as unknown) as Set<HTMLElement>;
+  bottomContainerIntersectedElems = (null as unknown) as Set<HTMLElement>;
+  TopIntersectionObs = (null as unknown) as IntersectionObserver;
+  BottomIntersectionObs = (null as unknown) as IntersectionObserver;
 }
 
 export function setScrollDirection(direction: ScrollDirection) {
@@ -65,30 +76,19 @@ export function getBottomMostElement(): HTMLElement {
 
 function topIntersectionObsCallback(entries: IntersectionObserverEntry[]) {
   entries.forEach(entry => {
-    const { target, isIntersecting, intersectionRatio } = entry;
-    const roundedIntersectionRatio = Math.round(intersectionRatio * 100);
-
-    if (target === elemsContainerRef.current) {
-      listObservation(
-        isIntersecting,
-        roundedIntersectionRatio,
-        ContainerPosition.TOP
-      );
-    } else if (target) {
+    const { target, isIntersecting } = entry;
+    if (target) {
       const targetElem = target as HTMLElement;
-
       if (!isIntersecting) {
-        // If the element is intersecting out then remove it from the set containing all the elements present in scroll view
-        // And if after removing the set becomes empty then it means that is the topmost element
         topContainerIntersectedElems.delete(targetElem);
         if (topContainerIntersectedElems.size === 0) {
           topMostElement = targetElem;
         }
       } else {
-        // If element is intersecting in then add it to set
         topContainerIntersectedElems.add(targetElem);
         setTopmostElem(targetElem);
       }
+      triggers();
     }
   });
 }
@@ -96,11 +96,8 @@ function topIntersectionObsCallback(entries: IntersectionObserverEntry[]) {
 function bottomIntersectionObsCallback(entries: IntersectionObserverEntry[]) {
   entries.forEach(entry => {
     const { target, isIntersecting } = entry;
-    if (target === elemsContainerRef.current) {
-      console.log("Observing whole list");
-    } else if (target) {
+    if (target) {
       const targetElem = target as HTMLElement;
-
       if (!isIntersecting) {
         bottomContainerIntersectedElems.delete(targetElem);
         if (bottomContainerIntersectedElems.size === 0) {
@@ -110,6 +107,7 @@ function bottomIntersectionObsCallback(entries: IntersectionObserverEntry[]) {
         bottomContainerIntersectedElems.add(targetElem);
         setBottommostElem(targetElem);
       }
+      triggers();
     }
   });
 }
@@ -136,29 +134,37 @@ function setBottommostElem(targetElem: HTMLElement) {
   }
 }
 
-function listObservation(
-  isIntersecting: boolean,
-  intersectionRatio: number,
-  intersectionContainer: ContainerPosition
-) {
-  console.log("====List observing====");
-  console.log("is intersecting?: ", isIntersecting);
-  console.log("intersection ratio: ", intersectionRatio);
-  console.log(
-    "scroll direction: ",
-    scrollDirection === ScrollDirection.UP ? "UP" : "DOWN"
-  );
-  if (intersectionContainer === ContainerPosition.TOP) {
-    if (scrollDirection === ScrollDirection.DOWN && isIntersecting) {
-      console.log("Scroll about to reach Top end");
-    } else if (scrollDirection === ScrollDirection.DOWN && !isIntersecting) {
-      console.log("Scroll reached Top end");
-    } else if (
-      scrollDirection === ScrollDirection.UP &&
-      isIntersecting &&
-      Math.round(intersectionRatio) === 1
-    ) {
-      console.log("Scroll length exceeding at top");
-    }
+function triggers() {
+  additionTriggers();
+  evictionTriggers();
+}
+
+function additionTriggers() {
+  if (
+    scrollDirection === ScrollDirection.DOWN &&
+    topContainerIntersectedElems.size <= minRequiredElementBeyondViewPort
+  ) {
+    console.warn("Please add more elements at top");
+  }
+  if (
+    scrollDirection === ScrollDirection.UP &&
+    bottomContainerIntersectedElems.size <= minRequiredElementBeyondViewPort
+  ) {
+    console.warn("Please add more elements at bottom");
+  }
+}
+
+function evictionTriggers() {
+  if (
+    scrollDirection === ScrollDirection.UP &&
+    topContainerIntersectedElems.size >= maxAllowedElemsBeyondViewPort
+  ) {
+    console.warn("Please remove elements from top");
+  }
+  if (
+    scrollDirection === ScrollDirection.DOWN &&
+    bottomContainerIntersectedElems.size >= maxAllowedElemsBeyondViewPort
+  ) {
+    console.warn("Please remove elements from bottom");
   }
 }

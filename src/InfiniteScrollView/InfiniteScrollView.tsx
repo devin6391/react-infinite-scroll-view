@@ -53,8 +53,8 @@ export default class InfiniteScrollView extends React.Component<
       }, 0);
 
       setInterval(() => {
-        console.log("Topmost element initially is: ", getTopmostElement());
-        console.log("Bottommost element initially is: ", getBottomMostElement());
+        // console.log("Topmost element initially is: ", getTopmostElement());
+        // console.log("Bottommost element initially is: ", getBottomMostElement());
       }, 2000);
     }
   }

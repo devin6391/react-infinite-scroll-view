@@ -1,43 +1,65 @@
+export interface Triggers {
+  onReachEnd: (direction: ScrollContainer) => void;
+  onAboutToReachEnd: (direction: ScrollContainer) => void;
+  onExceedElements: (direction: ScrollContainer) => void;
+}
 export enum ScrollDirection {
   UP = 1,
   DOWN
 }
-
-export enum ContainerPosition {
+export enum ScrollContainer {
   TOP = 1,
-  Bottom
+  BOTTOM
 }
 
 export let TopIntersectionObs: IntersectionObserver;
 export let BottomIntersectionObs: IntersectionObserver;
 
-const maxAllowedElemsBeyondViewPort = 10;
-const minRequiredElementBeyondViewPort = 5;
+// Trigger limits
+let maxAllowedElems: number;
+let minRequiredElement: number;
 
+// Trigger namespace
+let allTriggers: Triggers;
+
+// Scroll direction
 let scrollDirection: ScrollDirection = ScrollDirection.UP;
+
+// Elements on the edge of scroll window
 let topMostElement: HTMLElement;
 let bottomMostElement: HTMLElement;
+
+// Sets containig all elements in respective intersection observers
 let topContainerIntersectedElems = new Set<HTMLElement>();
 let bottomContainerIntersectedElems = new Set<HTMLElement>();
 
 export function initIntesectionObserver(
-  containerRef: React.RefObject<HTMLElement>
+  containerRef: React.RefObject<HTMLElement>,
+  maxAllowedElemsBeyondViewPort: number,
+  minRequiredElementInViewPort: number,
+  triggers: Triggers
 ) {
+  maxAllowedElems = maxAllowedElemsBeyondViewPort;
+  minRequiredElement = minRequiredElementInViewPort;
+  allTriggers = triggers;
+
   const topIntersectionObserverOptions = {
     root: containerRef.current,
     threshold: [0, 1],
     rootMargin: "5000px 0px -99% 0px"
   };
-  TopIntersectionObs = new IntersectionObserver(
-    topIntersectionObsCallback,
-    topIntersectionObserverOptions
-  );
 
   const bottomIntersectionObserverOptions = {
     root: containerRef.current,
     threshold: [0, 1],
     rootMargin: "-99% 0px 5000px 0px"
   };
+
+  TopIntersectionObs = new IntersectionObserver(
+    topIntersectionObsCallback,
+    topIntersectionObserverOptions
+  );
+
   BottomIntersectionObs = new IntersectionObserver(
     bottomIntersectionObsCallback,
     bottomIntersectionObserverOptions
@@ -76,6 +98,7 @@ export function getBottomMostElement(): HTMLElement {
 
 function topIntersectionObsCallback(entries: IntersectionObserverEntry[]) {
   entries.forEach(entry => {
+    console.log("Intersectedddd ooo");
     const { target, isIntersecting } = entry;
     if (target) {
       const targetElem = target as HTMLElement;
@@ -137,34 +160,44 @@ function setBottommostElem(targetElem: HTMLElement) {
 function triggers() {
   additionTriggers();
   evictionTriggers();
+  reachEndTriggers();
 }
 
 function additionTriggers() {
   if (
     scrollDirection === ScrollDirection.DOWN &&
-    topContainerIntersectedElems.size <= minRequiredElementBeyondViewPort
+    topContainerIntersectedElems.size <= minRequiredElement
   ) {
-    console.warn("Please add more elements at top");
+    allTriggers.onAboutToReachEnd(ScrollContainer.TOP);
   }
   if (
     scrollDirection === ScrollDirection.UP &&
-    bottomContainerIntersectedElems.size <= minRequiredElementBeyondViewPort
+    bottomContainerIntersectedElems.size <= minRequiredElement
   ) {
-    console.warn("Please add more elements at bottom");
+    allTriggers.onAboutToReachEnd(ScrollContainer.BOTTOM);
   }
 }
 
 function evictionTriggers() {
   if (
     scrollDirection === ScrollDirection.UP &&
-    topContainerIntersectedElems.size >= maxAllowedElemsBeyondViewPort
+    topContainerIntersectedElems.size >= maxAllowedElems
   ) {
-    console.warn("Please remove elements from top");
+    allTriggers.onExceedElements(ScrollContainer.TOP);
   }
   if (
     scrollDirection === ScrollDirection.DOWN &&
-    bottomContainerIntersectedElems.size >= maxAllowedElemsBeyondViewPort
+    bottomContainerIntersectedElems.size >= maxAllowedElems
   ) {
-    console.warn("Please remove elements from bottom");
+    allTriggers.onExceedElements(ScrollContainer.BOTTOM);
+  }
+}
+
+function reachEndTriggers() {
+  if (topContainerIntersectedElems.size === 0) {
+    allTriggers.onReachEnd(ScrollContainer.TOP);
+  }
+  if (bottomContainerIntersectedElems.size === 0) {
+    allTriggers.onReachEnd(ScrollContainer.BOTTOM);
   }
 }

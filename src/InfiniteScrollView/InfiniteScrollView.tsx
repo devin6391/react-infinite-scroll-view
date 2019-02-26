@@ -10,7 +10,8 @@ import {
   getTopmostElement,
   BottomIntersectionObs,
   getBottomMostElement,
-  destroyIntersectionObserver
+  destroyIntersectionObserver,
+  ScrollContainer
 } from "./utils";
 import "./InfiniteScrollView.css";
 
@@ -19,11 +20,22 @@ export interface InfiniteScrollViewProps {
   loadingComponentTop?: JSX.Element;
   loadingComponentBottom?: JSX.Element;
   pivotKeySelector?: string;
-  onScrollReachEnd?: (direction: ScrollDirection) => void;
-  onScrollAboutToReachEnd?: (direction: ScrollDirection) => void;
+
+  // Limit for allowed/required elements on either side of viewport
+  maxAllowedElemsBeyondViewPort: number;
+  minRequiredElementBeyondViewPort: number;
+
+  // Triggers
+  onReachEnd: (direction: ScrollContainer) => void;
+  onAboutToReachEnd: (direction: ScrollContainer) => void;
+  onExceedElements: (direction: ScrollContainer) => void;
+
+  // Scroll related events
   onScroll?: (direction: ScrollDirection) => void;
   onscrollEnd?: (direction: ScrollDirection) => void;
   onTouch?: (direction: ScrollDirection) => void;
+
+  // When ISV is fully ready
   onFirstRender?: () => void;
 }
 
@@ -37,9 +49,29 @@ export default class InfiniteScrollView extends React.Component<
 
   private disableScrollHandler = false;
 
+  private initializedInterval: number | undefined = undefined;
+  private allObservedInitialized = false;
+  private firstRenderCalled = false;
+
   componentDidMount() {
-    const { pivotKeySelector } = this.props;
-    initIntesectionObserver(this.scrollRef);
+    const {
+      pivotKeySelector,
+      maxAllowedElemsBeyondViewPort,
+      minRequiredElementBeyondViewPort,
+      onReachEnd,
+      onAboutToReachEnd,
+      onExceedElements
+    } = this.props;
+    initIntesectionObserver(
+      this.scrollRef,
+      maxAllowedElemsBeyondViewPort || 10,
+      minRequiredElementBeyondViewPort || 5,
+      {
+        onReachEnd,
+        onAboutToReachEnd,
+        onExceedElements
+      }
+    );
     this.observeIntersectionOnChildren();
 
     if (pivotKeySelector) {
@@ -53,10 +85,13 @@ export default class InfiniteScrollView extends React.Component<
         }
       }, 0);
 
-      setInterval(() => {
-        // console.log("Topmost element initially is: ", getTopmostElement());
-        // console.log("Bottommost element initially is: ", getBottomMostElement());
-      }, 2000);
+      // setInterval(() => {
+      // console.log("Topmost element initially is: ", getTopmostElement());
+      // console.log(
+      //   "Bottommost element initially is: ",
+      //   getBottomMostElement()
+      // );
+      // }, 2000);
     }
   }
 

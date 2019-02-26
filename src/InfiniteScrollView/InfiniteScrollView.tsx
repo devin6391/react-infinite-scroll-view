@@ -38,7 +38,7 @@ export default class InfiniteScrollView extends React.Component<
 
   componentDidMount() {
     const { pivotKeySelector } = this.props;
-    initIntesectionObserver(this.scrollRef);
+    initIntesectionObserver(this.scrollRef, this.listRef);
     this.observeIntersectionOnChildren();
 
     if (pivotKeySelector) {
